@@ -7,7 +7,10 @@ import sys
 reload(sys)
 sys.setdefaultencoding( "utf-8" )
 
+#获取导入的xls文件名
 file_name=raw_input('请输入导入文件名')
+
+#尝试登陆zabbix平台
 try:
     zapi = ZabbixAPI("http://localhost/zabbix")
     zapi.login("admin", "zabbix")
@@ -15,6 +18,7 @@ except:
     print '\n 登录zabbix平台出现错误'
     sys.exit()
 
+#通过模板名获取模板ID
 def get_templateid(template_name):
     template_data = {
         "host": [template_name]
@@ -25,21 +29,30 @@ def get_templateid(template_name):
     else:
         return result
 
+#检查组名是否已经存在
 def check_group(group_name):
     return zapi.hostgroup.exists(name=group_name.strip())
 
+#创建组
 def create_group(group_name):
     groupid=zapi.hostgroup.create(name=group_name)
 
+#通过组名获取组ID
 def get_groupid(group_name):
     group_date = {
         "name":[group_name]
     }
     return str(zapi.hostgroup.get(filter=group_date)[0]['groupid'])
 
+#添加主机
 def create_host(host_data):
-    zapi.host.create(host_data)
- 
+    if zapi.host.exists(host=host_data["host"]):
+      print "主机 %s 已经存在" % host_data["name"]
+    else:
+      zapi.host.create(host_data)
+      print "添加主机: %s " % (host_data["name"])
+
+#打开xls文件 
 def open_excel(file= file_name):
      try:
          data = xlrd.open_workbook(file)
@@ -47,6 +60,7 @@ def open_excel(file= file_name):
      except Exception,e:
          print str(e)
 
+#将xls文件内主机导入到list
 def get_hosts(file):
     data = open_excel(file)
     table = data.sheets()[0]
@@ -55,11 +69,11 @@ def get_hosts(file):
     list = []
     for rownum in range(1,nrows):
       #print table.row_values(rownum)[0]
-      list.append(table.row_values(rownum))
-    
+      list.append(table.row_values(rownum)) 
     return list
+
 def main():
-  hosts=get_hosts(file)
+  hosts=get_hosts(file_name)
   for host in hosts:
       host_name=host[0]
       visible_name=host[1]
@@ -67,6 +81,7 @@ def main():
       group=host[3]
       template=host[4]
       templateid=get_templateid(template)
+      inventory_location=host[5]
       #print templateid
       if check_group(group)==False:
           print u'添加主机组: %s' % group
@@ -97,11 +112,10 @@ def main():
             }
         ],
         "inventory": {
-            "macaddress_a": "01234",
-            "macaddress_b": "56768"
+            "location": inventory_location
         }
       }
-      print "添加主机: %s ,分组: %s ,模板ID: %s" % (visible_name,group,templateid)
+      #print "添加主机: %s ,分组: %s ,模板ID: %s" % (visible_name,group,templateid)
       create_host(host_data)
 
 if __name__=="__main__":
