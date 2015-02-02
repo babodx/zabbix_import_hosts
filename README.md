@@ -18,3 +18,16 @@ pip install pyzabbix
 
 ```
 
+# 用法演示
+```
+python zabbix_import_hosts.py 
+
+请输入导入文件名hostlist.xls
+主机 主机1 已经存在
+添加主机: 数据库1 
+添加主机: 数据库2
+添加主机: WEB主机1
+添加主机: WEB主机2 
+添加主机: WEB主机3
+
+```
